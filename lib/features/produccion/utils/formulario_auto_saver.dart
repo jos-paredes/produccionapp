@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
-import 'package:produccionapp/features/produccion/bd/database_helper.dart';
+import 'package:produccionapp/features/produccion/database/database_helper.dart';
 import 'package:produccionapp/features/produccion/providers/registro_produccion_provider.dart';
 import 'package:provider/provider.dart';
 

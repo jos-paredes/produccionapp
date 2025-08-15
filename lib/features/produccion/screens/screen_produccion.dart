@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
+import 'package:produccionapp/core/constants/api_routes.dart';
 import 'package:produccionapp/features/auth/providers/user_provider.dart';
 import 'package:produccionapp/features/auth/screens/login_screen.dart';
 import 'package:produccionapp/features/produccion/providers/registro_produccion_provider.dart';
+import 'package:produccionapp/registros_bd.dart';
 import 'package:provider/provider.dart';
 import 'package:produccionapp/features/produccion/screens/screen_formulario_general.dart';
 import 'package:produccionapp/features/produccion/screens/screen_formulario_resistencias.dart';
 import 'package:produccionapp/features/produccion/screens/screen_formulario_temperaturas.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class ScreenProduccion extends StatefulWidget {
   const ScreenProduccion({super.key});
@@ -18,17 +22,15 @@ class ScreenProduccion extends StatefulWidget {
 
 class _ScreenProduccionState extends State<ScreenProduccion> {
   final PersistentTabController _controller =
-  PersistentTabController(initialIndex: 0);
+      PersistentTabController(initialIndex: 0);
 
-  List<Widget> _buildScreens() =>
-      const [
+  List<Widget> _buildScreens() => const [
         FormularioGeneralScreen(),
-        FormularioResistenciasScreen(idRegistro: '',),
+        FormularioResistenciasScreen(),
         FormularioTemperaturasScreen(),
       ];
 
-  List<PersistentBottomNavBarItem> _navBarsItems() =>
-      [
+  List<PersistentBottomNavBarItem> _navBarsItems() => [
         PersistentBottomNavBarItem(
           icon: const Icon(Icons.list_alt),
           title: "General",
@@ -49,31 +51,57 @@ class _ScreenProduccionState extends State<ScreenProduccion> {
         ),
       ];
 
+  Future<void> _guardarRegistroEnBackend({
+    required String idRegistro,
+    required String nombreUsuario,
+    required String turno,
+    required DateTime fecha,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse(ApiRoutes.registroProduccion),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'id_registro': idRegistro,
+          'nombre_usuario': nombreUsuario,
+          'turno': turno,
+          'fecha': fecha.toIso8601String(),
+        }),
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw Exception('Error al guardar en backend: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Error de conexión: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final registroProvider = Provider.of<RegistroProduccionProvider>(
-        context, listen: false);
-
+    Provider.of<UserProvider>(context, listen: false);
+    final registroProvider =
+        Provider.of<RegistroProduccionProvider>(context, listen: false);
 
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: Center(child: const Text('Inyectora IPS - 400')),
+        title: const Center(child: Text('Inyectora IPS - 400')),
         backgroundColor: Colors.green,
         actions: [
-          if (_controller.index != 0)
-            IconButton(
-              icon: const Icon(Icons.camera_alt),
-              onPressed: () {
-                print("Botón de cámara presionado");
-              },
-            ),
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {
-              print("Botón de perfil presionado");
               _mostrarDialogoInicio(context, registroProvider);
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.book),
+            onPressed: () {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => TodosLosRegistrosScreen()));
             },
           ),
           const SizedBox(width: 8),
@@ -96,7 +124,9 @@ class _ScreenProduccionState extends State<ScreenProduccion> {
       ),
     );
   }
-  void _mostrarDialogoInicio(BuildContext context, RegistroProduccionProvider provider) {
+
+  void _mostrarDialogoInicio(
+      BuildContext context, RegistroProduccionProvider provider) {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     bool registroCreado = provider.registroActivo;
 
@@ -106,11 +136,11 @@ class _ScreenProduccionState extends State<ScreenProduccion> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: Center(child: Text(registroCreado ? 'Registro Activo' : 'Iniciar Registro')),
+              title: Center(
+                  child: Text(registroCreado ? 'Registro Activo' : 'Iniciar Registro')),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Información del usuario
                   if (userProvider.user != null || userProvider.turno != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
@@ -135,8 +165,6 @@ class _ScreenProduccionState extends State<ScreenProduccion> {
                         ],
                       ),
                     ),
-
-                  // Información del registro (solo si hay registro activo)
                   if (registroCreado) ...[
                     const Divider(),
                     Padding(
@@ -152,8 +180,10 @@ class _ScreenProduccionState extends State<ScreenProduccion> {
                           ),
                           const SizedBox(height: 8),
                           Text('ID: ${provider.idRegistro}'),
-                          Text('Fecha: ${DateFormat('dd/MM/yyyy').format(provider.fecha!)}'),
-                          Text('Hora: ${DateFormat('HH:mm').format(provider.fecha!)}'),
+                          Text(
+                              'Fecha: ${DateFormat('dd/MM/yyyy').format(provider.fecha!)}'),
+                          Text(
+                              'Hora: ${DateFormat('HH:mm').format(provider.fecha!)}'),
                         ],
                       ),
                     ),
@@ -164,7 +194,7 @@ class _ScreenProduccionState extends State<ScreenProduccion> {
                 if (!registroCreado)
                   TextButton(
                     onPressed: () {
-                      Navigator.of(context).pop(); // Cierra el diálogo
+                      Navigator.of(context).pop();
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(builder: (context) => LoginScreen()),
                       );
@@ -177,22 +207,43 @@ class _ScreenProduccionState extends State<ScreenProduccion> {
                       await provider.cerrarRegistro();
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Registro cerrado y guardado')),
+                        const SnackBar(
+                            content: Text('Registro cerrado y guardado')),
                       );
                     } else {
-                      if (userProvider.user?.name != null && userProvider.turno != null) {
-                        await provider.crearRegistro(
-                          nombre: userProvider.user!.name!,
-                          turno: userProvider.turno.toString(),
-                        );
+                      if (userProvider.user?.name != null &&
+                          userProvider.turno != null) {
+                        try {
+                          // Crear registro local
+                          await provider.crearRegistro(
+                            nombre: userProvider.user!.name!,
+                            turno: userProvider.turno.toString(),
+                          );
 
-                        setState(() {
-                          registroCreado = true;
-                        });
+                          // Guardar en el backend
+                          await _guardarRegistroEnBackend(
+                            idRegistro: provider.idRegistro.toString(),
+                            nombreUsuario: userProvider.user!.name!,
+                            turno: userProvider.turno.toString(),
+                            fecha: provider.fecha!,
+                          );
 
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Registro creado y guardado')),
-                        );
+                          setState(() {
+                            registroCreado = true;
+                          });
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text(
+                                    'Registro creado y guardado correctamente')),
+                          );
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(
+                                    'Error al guardar registro: ${e.toString()}')),
+                          );
+                        }
                       }
                     }
                   },

@@ -6,7 +6,6 @@ import 'package:produccionapp/features/auth/providers/user_provider.dart';
 import 'package:produccionapp/features/produccion/providers/registro_produccion_provider.dart';
 import 'package:produccionapp/features/auth/screens/login_screen.dart';
 
-import 'features/produccion/providers/imagen_provider.dart';
 
 
 
@@ -24,7 +23,7 @@ void main() async {
     final nombre = registroProvider.nombreUsuario ?? '';
     final turno = int.tryParse(registroProvider.turno ?? '1') ?? 1;
 
-    userProvider.setUser(
+    userProvider.setUser( 
       User(id: -1, name: nombre, id_area: 2),
     );
     userProvider.setTurno(turno);
@@ -35,7 +34,6 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => userProvider),
         ChangeNotifierProvider(create: (_) => registroProvider),
-        ChangeNotifierProvider(create: (_) => ImagenProvider()),
       ],
       child: MyApp(registroActivo: registroProvider.registroActivo),
     ),
@@ -52,6 +50,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Producción App',
+      //home:  TodosLosRegistrosScreen(),
       home: registroActivo ? const ScreenProduccion() : LoginScreen(),
     );
   }

@@ -1,7 +1,7 @@
 // features/produccion/providers/registro_produccion_provider.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:produccionapp/features/produccion/bd/database_helper.dart';
+import 'package:produccionapp/features/produccion/database/database_helper.dart';
 
 class RegistroProduccionProvider extends ChangeNotifier {
   final DatabaseHelper _dbHelper = DatabaseHelper();
